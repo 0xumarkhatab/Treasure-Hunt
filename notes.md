@@ -1,10 +1,12 @@
 
-- do we store a plain number ? read by bots data is public  
-- SHould we store keckkak256 of number , how will it work ? ✅
-- source of randomness ? block hash can be manipulated by miners , Chainlink VRFs?
+- do we store a plain number ? read by bots data is public SHould we store keckkak256 of number , how will it work ? ✅
 - Decision for valid moves - allow wrap around moves  ? ✅
 - Error as strings or Custom errors  ? ✅
 
+
+- Assembly for optimization ?
+- Variable packing
+- source of randomness ? block hash can be manipulated by miners , Chainlink VRFs?
 
 
 

@@ -171,9 +171,14 @@ contract TreasureHunt {
     //      Public Methods
     // //////////////////////////
 
-    // This function checks if a move is valid (adjacent to the current position)
-    // It checks if the new position is within the grid and if the difference between the current and new positions is 1 or -1 (up, down, left, or right)
     /**
+
+This function checks if a move is valid (adjacent to the current position) using getPossibleMoves uder the hood.
+
+It checks if the new position is within the grid and if the difference between the current and new positions 
+(up, down, left, or right)
+    
+Virtial Board Format :
 
                 | 1  | 2  | 3  | 4  |  5 |  6 |  7 |  8 |  9 |  10 |
                 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 |  20 |
@@ -188,52 +193,34 @@ contract TreasureHunt {
         
 Possible Moves :
 
-        For 3 ->
-        3+10 = 1
-        3-10 = -7 x
-        3+1 = 4
-        3-1 = 2
+Note :-
 
-        For 10 ->
-        10+10 = 20
-        10-10 = 0 x
-        10+1 = 11 ,10%10=0 x
-        10-1 = 9 
+We don't allow wrap-around moves like 
+right from 10 would lead to 1 , up from 1 would lead to 91 
+we don't do that here to keep things simple
 
-        For 60 ->
-        60+10
-        60-10
-        60-1 = 59
-        60+1 = 61 , 60%10 = 0 x
+Current Position | Possible Moves (Valid/Invalid)
+----------------|-----------------------------
+|  3            | 3 - 10 = -7 ❌, 3 + 10 = 13 ✅ , 3 - 1 = 2 ✅, 3 + 1 = 4 ✅
+|  10           | 10 - 10 = 0 ❌, 10 + 10 = 20 ✅, 10 - 1 = 9 ✅, 10 + 1 = 11 , 10 % 10 = 0  ❌
+|  60           | 60 - 10 = 50 ✅, 60 + 10 = 70 ✅, 60 - 1 = 59 ✅, 60 + 1 = 61 , 60 % 10 = 0 ❌
+|  100          | 100 - 10 = 90 ✅, 100 + 10 = 110 ❌, 100 - 1 = 99 ✅, 100 + 1 = 101, 100 % 10 = 0 ❌
+|  95           | 95 - 10 = 85 ✅, 95 + 10 = 105 ❌, 95 - 1 = 94 ✅, 95 + 1 = 96 ✅
+|  91           | 91 - 10 = 81 ✅, 91 + 10 = 101 ❌, 91 - 1 = 90 ✅, 91 + 1 = 92, 91 % 10 = 1 ❌
 
-        For 100 ->
-        100 + 10 = 110 x
-        100-10 = 90
-        100+1 =101 , 100%10 =0 x
-        100-1 = 99
+Summary :
 
-        For 95 ->
-        95+10=105
-        95-10=85
-        95+1 = 96
-        95-1=94
+Generally , allowed moves will be like 
 
-        For 91 -> 
-
-        91+10 =101 x
-        91-10 =81 
-        91+1 = 92
-        91-1 =91 %10 = 1 x
-
-
-         left ( difference is -1 )
-         right ( difference is +1 )
-         up ( minus GridSize )
-         Down ( + GridSize )
-         They are valid moves in General,
-         check `getPossibleMoves method
+✅ left ( difference is -1 )
+✅ right ( difference is +1 )
+✅ up ( minus GridSize )
+✅ Down ( + GridSize )
+✅ They are valid moves in General,
+✅ check `getPossibleMoves method
  
-         */
+
+*/
 
     function isValidMove(
         uint8 currentPosition,
