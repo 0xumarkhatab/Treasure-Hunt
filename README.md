@@ -94,6 +94,9 @@ Then new move is made then according to following Rules , the treasure position 
 - If a player moves to a grid position that is a prime number, the treasure jumps to a  new random position on the grid.
 
 
+**Question**  : What if the move made by user is both Multiple of 5 and a prime number i.e 5 itself , then how random position is generated?
+
+**Solution** : we will use the case of prime as final one i.e generate a random number ✅
 
 **Question**  : Do we `Store Treasury position as a Plain number ?` But it can be read by anyone since the data is `public` on blockchain.
 
