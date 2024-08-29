@@ -24,7 +24,7 @@ import {LinkTokenInterface} from "@chainlink/contracts@1.2.0/src/v0.8/shared/int
                    | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 |
                    | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 |
                    | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 |
-                   | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 |
+                   | 40 | 41 | 42 | 43 | 💰 | 45 | 46 | 47 | 48 | 49 |
                    | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 |
                    | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 |
                    | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 |
@@ -49,22 +49,38 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
 
     // Size of the game grid (10x10)
     uint8 public constant GRID_SIZE = 10;
-
+    // chainlink -vrf-param
+    uint16 requestConfirmations = 3;
+    // chainlink -vrf-param
+    uint32 callbackGasLimit = 100000;
+    // For this example, retrieve 2 random values in one request.
+    // Cannot exceed VRFV2Wrapper.getConfig().maxNumWords.
+    uint32 numWords = 1;
     // percentage of the total ETH balance that the winner receives (90%)
-    uint256 public constant TREASURE_REWARD_PERCENT = 90;
+    uint8 public constant TREASURE_REWARD_PERCENT = 90;
+
+    //  160+8+16+32+32 =248 bits
 
     // current position hash of the treasure on the grid - to avoid reading the secret position directly
     bytes32 treasurePosition;
-    uint256 public totalEth; // total amount of ETH deposited by all players
-    /**
+    // total amount of ETH deposited by all players
+    uint256 public totalEth;
+
+    /*
         Fees :
         1. Joing Fee : Every user needs to pay a joining/registration Fee to be able to take part in the game
         2. Each time a user wants to play , they have to make a small payment too to prevent volumetric attacks by Bots
-     */
+    */
+    uint256 public randomWordsNum;
+    uint256 public lastRequestId;
+
     uint256 public joinFee = 0.1 ether;
     uint256 public playFee = 0.01 ether;
-    address linkToken = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
-    address wrapperAddress = 0xab18414CD93297B0d12ac29E63Ca20f515b3DB46;
+
+    // Sepolia Link Token and Wrapper address for chainlink vrf
+    address immutable linkToken = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
+    address immutable wrapperAddress =
+        0xab18414CD93297B0d12ac29E63Ca20f515b3DB46;
 
     //  ////////////////////////
     //      Struct Definitions
@@ -73,6 +89,11 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
     struct Player {
         address address_; // player's Ethereum address
         uint8 position; // player's current position on the grid
+    }
+    struct RequestStatus {
+        uint256 paid; // amount paid in link
+        bool fulfilled; // whether the request has been successfully fulfilled
+        uint256[] randomWords;
     }
 
     //  ////////////////////////
@@ -83,46 +104,10 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
     mapping(address => uint) public lastPlayedBlockNumber;
     mapping(address => bool) public isRegistered;
 
-    // ////////////////////
-    // Chainlink VRF Definitions
-    // ///////////////////
-
-    uint public randomWordsNum;
-
-    event RequestSent(uint256 requestId, uint32 numWords);
-    event RequestFulfilled(
-        uint256 requestId,
-        uint256[] randomWords,
-        uint256 payment
-    );
-
-    struct RequestStatus {
-        uint256 paid; // amount paid in link
-        bool fulfilled; // whether the request has been successfully fulfilled
-        uint256[] randomWords;
-    }
+    //  Chainlink VRF mappings
     mapping(uint256 => RequestStatus)
         public s_requests; /* requestId --> requestStatus */
-
-    // past requests Id.
     uint256[] public requestIds;
-    uint256 public lastRequestId;
-
-    // Depends on the number of requested values that you want sent to the
-    // fulfillRandomWords() function. Test and adjust
-    // this limit based on the network that you select, the size of the request,
-    // and the processing of the callback request in the fulfillRandomWords()
-    // function.
-    uint32 callbackGasLimit = 100000;
-
-    // The default is 3, but you can set this higher.
-    uint16 requestConfirmations = 3;
-
-    // For this example, retrieve 2 random values in one request.
-    // Cannot exceed VRFV2Wrapper.getConfig().maxNumWords.
-    uint32 numWords = 1;
-
-    /////////////////
 
     //  ////////////////////////
     //      Modifiers
@@ -141,6 +126,14 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
     event Joined_Game(address player, uint timestamp);
     event Won_Game(address player, uint timestamp, uint amount);
     event Treasury_Updated(address player, uint timestamp);
+
+    // chainlink VRF related events
+    event RequestSent(uint256 requestId, uint32 numWords);
+    event RequestFulfilled(
+        uint256 requestId,
+        uint256[] randomWords,
+        uint256 payment
+    );
 
     //  ////////////////////////
     //      Custom Erros
@@ -199,8 +192,9 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
         );
 
      */
+    // Marked payable for gas optimization
     constructor()
-        payable
+        payable 
         ConfirmedOwner(msg.sender)
         VRFV2WrapperConsumerBase(linkToken, wrapperAddress)
     {
@@ -216,13 +210,19 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
         if (msg.value < joinFee) {
             revert InsufficientJoinFee();
         }
-
-        totalEth += msg.value;
         // Register the player
         isRegistered[msg.sender] = true;
-        //  Assign a random position to user
+        // Get a random position to assign to user
         uint8 rand = getRandomPosition();
-        players[msg.sender].position = rand;
+
+        // Unchecked for gas optimization
+
+        unchecked {
+            totalEth += msg.value;
+            //  Assign a random position to user
+            players[msg.sender].position = rand;
+        }
+
         emit Joined_Game(msg.sender, block.timestamp);
     }
 
@@ -270,7 +270,10 @@ contract TreasureHunt is VRFV2WrapperConsumerBase, ConfirmedOwner {
             // Calculate the reward and transfer it to the winner
             uint256 reward = (totalEth * TREASURE_REWARD_PERCENT) / 100;
             payable(msg.sender).transfer(reward);
+              // Unchecked for gas optimization
+        unchecked {
             totalEth -= reward;
+        }
             isWon = true;
             // moveTreasure(newPosition);
         }
@@ -335,9 +338,12 @@ Generally , allowed moves will be like
         uint8 newPosition
     ) public pure returns (bool) {
         uint8[4] memory possible_moves = getPossibleMoves(currentPosition);
-        for (uint8 i = 0; i < possible_moves.length; i++) {
+        for (uint8 i = 0; i < possible_moves.length; ) {
             if ((newPosition) == possible_moves[i]) {
                 return true;
+            }
+            unchecked{
+                i=i+1;
             }
         }
         return false;
@@ -509,5 +515,4 @@ Generally , allowed moves will be like
         return (request.paid, request.fulfilled, request.randomWords);
     }
 
-    //
 }

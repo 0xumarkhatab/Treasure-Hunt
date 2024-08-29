@@ -9,47 +9,131 @@
                          | |___| |  |  |  |  |  | |  \\ | |      | |
                          | |   | |  |  |__|  |  | |   \\| |      | |
                          |_|   |_|  |__ __ __|  |_|     |_|     |___| 
- 
+
+                    ------------------------------------------------
+                   | 0	| 1  | 2  |  3 |  4 | 5  | 6  | 7  | 8  | 9  |
+                   | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 |
+                   | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 |
+                   | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 |
+                   | 40 | 41 | 42 | 43 | 💰 | 45 | 46 | 47 | 48 | 49 |
+                   | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 |
+                   | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 |
+                   | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 |
+                   | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 |
+                   | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 |
+                    -------------------------------------------------
+
 # Introduction
-Treasure Hunt is an on-chain lottery game where users can play make the moves across the board
-and the person who makes the move on the position where treasury is located , the person wins 90% of contract's funds . Treasury Position is determined through provable fair randomness source.
+Treasure Hunt is an on-chain lottery game where users can play, make the moves across the 10x10 board and Win ETH.
+
+The User who makes the move on the position where treasury is located , wins 90% of contract's funds .
+
+The Game board is a virtual 10x10 Grid where users jsut need to mention a position number from 0-99
+
+Treasury Position is determined through provable fair randomness source .
 
 ## How to play ?
-1. Users register themselves by paying `joinFee` in ETH by calling `JoinGame()` method to be elible for playing the game 
+1. Users register themselves by paying `joinFee` in ETH by calling `JoinGame()` method to be elible for playing the game.
 2. Once users are registered , they can call `move()` method with a minor `playFee` in ETH to make the move . This small fee is deliberate effort to prevent bot attacks.
 
 When the move is made , new treasury position is re-calculated through provable fair randomness source which is `Chainlink VRF`.
 
 If User's position is same as treasury , user wins and recieves 90% of total contract's Funds.
 
+## Notable Things
+
+1. `Create2` for deterministic deployment
+2. `Keccak256` for storing the treasury position
+3. `Chainlink Vrfs` for randomness source
+4. `Foundry` for entire development and testing
+5. `Sepolia` Testnet 
+6. `Forge Std` cheats and VM members 
+
+
+
 
 ## Challenges and Design Choices
+
+1. How do we store the treasure position ?
+
+**Question** : What will be `Source of randomness` ?
+
+**Solution** : block hash can be manipulated by miners , So , we have used `Chainlink VRFs`
+
+**Question**  : Do we `Store Treasury position as a Plain number ?` But it can be read by anyone since the data is `public` on blockchain.
+
+**Solution** : We have chosen to store `keccak256 of Treasury Position ` ✅
+
+
+**Question** : Decision for `Valid moves` - allow wrap around moves  ? ✅
+
+**Solution** : Keep things simple and allow only valid moves i.e you can not move left and up from top-left corner
+
+**Question** : `Errors` as strings or Custom errors  ? 
+
+**Solution** : Use `Custom errors for Gas optimization` ✅
+
+**Question** : How much Assembly laguage for optimization ? Code readibility will be affected with so much Yul/
+
+**Solution** : We `trade off code readability at the cost of some gas`
+
+**Question** : `Variable packing` ?
+
+**Solution** : Use hardened data types for variables and pack them up for gas optimization
 
 
 ## Gas Optimization 
 
 ### Before Gas Optimization
 
-```javascript
-| src/TreasureHunt.sol:TreasureHunt contract |                 |        |        |        |         |
-|--------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                            | Deployment Size |        |        |        |         |
-| 1759243                                    | 8306            |        |        |        |         |
-| Function Name                              | min             | avg    | median | max    | # calls |
-| GRID_SIZE                                  | 337             | 337    | 337    | 337    | 1       |
-| getPossibleMoves                           | 2479            | 2479   | 2479   | 2479   | 3       |
-| isRegistered                               | 607             | 607    | 607    | 607    | 1       |
-| joinFee                                    | 2394            | 2394   | 2394   | 2394   | 5       |
-| joinGame                                   | 303357          | 304187 | 303357 | 320457 | 103     |
-| move                                       | 28045           | 184176 | 184586 | 338802 | 6       |
-| playFee                                    | 2374            | 2374   | 2374   | 2374   | 5       |
-| players                                    | 645             | 645    | 645    | 645    | 3       |
+| TreasureHunt     |                 |        |        |        |         |
+| ---------------- | --------------- | ------ | ------ | ------ | ------- |
+| Deployment Cost  | Deployment Size |        |        |        |         |
+| 1759243          | 8306            |        |        |        |         |
+| Function Name    | min             | avg    | median | max    | # calls |
+| GRID_SIZE        | 337             | 337    | 337    | 337    | 1       |
+| getPossibleMoves | 2479            | 2479   | 2479   | 2479   | 3       |
+| isRegistered     | 607             | 607    | 607    | 607    | 1       |
+| joinFee          | 2394            | 2394   | 2394   | 2394   | 5       |
+| joinGame         | 303357          | 304187 | 303357 | 320457 | 103     |
+| move             | 28045           | 184176 | 184586 | 338802 | 6       |
+| playFee          | 2374            | 2374   | 2374   | 2374   | 5       |
+| players          | 645             | 645    | 645    | 645    | 3       |
 
-```
 
 ### After Gas Optimization
 
-## Tests
+
+| TreasureHunt     |                 |        |        |        |         |
+| ---------------- | --------------- | ------ | ------ | ------ | ------- |
+| Deployment Cost  | Deployment Size |        |        |        |         |
+| 1679372          | 8242            |        |        |        |         |
+| Function Name    | min             | avg    | median | max    | # calls |
+| GRID_SIZE        | 337             | 337    | 337    | 337    | 1       |
+| getPossibleMoves | 2479            | 2479   | 2479   | 2479   | 3       |
+| isRegistered     | 607             | 607    | 607    | 607    | 1       |
+| joinFee          | 2394            | 2394   | 2394   | 2394   | 5       |
+| joinGame         | 303318          | 304148 | 303318 | 320418 | 103     |
+| move             | 28045           | 184161 | 184571 | 338773 | 6       |
+| playFee          | 2374            | 2374   | 2374   | 2374   | 5       |
+| players          | 645             | 645    | 645    | 645    | 3       |
+
+
+
+## Insights
+
+We have improved `Deployment Cost` by `4.56%` which is good.
+Further gas optimization can be done using `Yul` or `Huff` , however , i decided to 
+`keep my code more readable at cost of some gas` 
+              
+_The Gas-Readibility tradeoff_
+
+
+
+
+## Testing
+I've written multiple tests to determine if the code is working as intended.
+
 ### 1. testJoinGame
 
 ### Command
@@ -106,8 +190,7 @@ Traces:
     │   └─ ← [Return] true
     ├─ [0] VM::stopPrank()
     │   └─ ← [Return] 
-    └─ ← [Stop] 
-
+    └─ ← [Stop]
 ```
 
 ## 2. test_MoveWithoutJoin
@@ -200,7 +283,6 @@ Traces:
     ├─ [0] VM::stopPrank()
     │   └─ ← [Return] 
     └─ ← [Stop] 
-
 ```
 
 ## 5. test_InvalidMoves
@@ -240,12 +322,13 @@ forge test -vvvv --fork-url https://sepolia.infura.io/v3/YOUR_INFURA_API_KEY --m
 
 ### Output
 
-```bash
+```java
 [PASS] testWinGame() (gas: 24070849)
 Logs:
   Winner is  0x7d577a597B2742b498Cb5Cf0C26cDCD726d39E6e
-
 Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 191.74s (179.20s CPU time)
-
-
 ```
+
+## Conclusion
+It was a fun challenge to refresh many aspects of the smart contract development World.
+

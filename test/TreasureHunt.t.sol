@@ -43,7 +43,7 @@ contract TreasureHuntTest is Test {
         address deployed_address = deployTreasureHunt(bytecode, salt);
         treasureHunt = TreasureHunt(deployed_address);
         require(
-            address(deployed_address) == calculated_treasure_hunt_address,
+            deployed_address == calculated_treasure_hunt_address,
             "different deployment addresses"
         );
 
@@ -61,10 +61,10 @@ contract TreasureHuntTest is Test {
     function computeAddress(
         bytes memory _byteCode,
         uint256 _salt,
-        address owner
-    ) public view returns (address) {
+        address _owner
+    ) public pure returns (address) {
         bytes32 hash_ = keccak256(
-            abi.encodePacked(bytes1(0xff), owner, _salt, keccak256(_byteCode))
+            abi.encodePacked(bytes1(0xff), _owner, _salt, keccak256(_byteCode))
         );
         return address(uint160(uint256(hash_)));
     }
