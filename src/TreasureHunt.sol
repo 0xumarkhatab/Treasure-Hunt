@@ -390,15 +390,15 @@ Generally , allowed moves will be like
         // This function moves the treasure based on the rules:
         // - If the current position is a multiple of 5, move to a random adjacent position.
         // - If the current position is prime, move to a random position on the grid.
-
+        // - If Both , the result of the prime branch is final
         uint8 rand;
         if (isMultipleOf5(newMove)) {
             rand = (getRandomAdjacentPosition(newMove));
-            assign_treasure_position(rand);
-        } else if (isPrime(newMove)) {
-            rand = getRandomPosition();
-            assign_treasure_position(rand);
         }
+        if (isPrime(newMove)) {
+            rand = getRandomPosition();
+        }
+        assign_treasure_position(rand);
     }
 
     //     //////////////////////////
