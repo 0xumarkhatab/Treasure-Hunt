@@ -9,9 +9,8 @@
                          | |___| |  |  |  |  |  | |  \\ | |      | |
                          | |   | |  |  |__|  |  | |   \\| |      | |
                          |_|   |_|  |__ __ __|  |_|     |_|     |___| 
-
-                    ------------------------------------------------
-                   | 0	| 1  | 2  |  3 |  4 | 5  | 6  | 7  | 8  | 9  |
+                    -------------------------------------------------
+                   | 0  | 1  | 2  |  3 |  4 | 5  | 6  | 7  | 8  | 9  |
                    | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 |
                    | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 |
                    | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 |
@@ -22,14 +21,12 @@
                    | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 |
                    | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 |
                     -------------------------------------------------
-
-
 # Introduction
-Treasure Hunt is an on-chain lottery game where users can play, make the moves across the 10x10 board and Win ETH.
+Treasure Hunt is an `on-chain` game where users can `play`, make the moves across the `10x10 board` and `Win ETH`.
 
-The User who makes the move on the position where treasury is located , wins 90% of contract's funds .
+The User who makes the move on the position where treasury is located , `wins 90% of contract's funds` .
 
-The Game board is a virtual 10x10 Grid where users jsut need to mention a position number from 0-99
+The Game board is a virtual 10x10 Grid where users jsut need to mention a position number from `0-99`
 
 Treasury Position is determined through provable fair randomness source .
 
@@ -52,14 +49,51 @@ If User's position is same as treasury , user wins and recieves 90% of total con
 
 
 
+## Complete Game Description
+
+### Objective: 
+
+A simple on-chain game called “Treasure Hunt,” where multiple players  can participate. The goal of the game is to find the hidden treasure, but the twist is that the location  of the treasure is determined dynamically based on player interactions and a set of predefined  rules. 
+
+#### Rules: 
+
+1. Grid Setup: The game operates on a 10x10 grid. Each grid position has a unique identifier (0  to 99). 
+2. Players: Any Ethereum address can participate by sending a small amount of ETH to the  contract. Each player can only move once per turn. 
+Each player has to pay `Join` Fee and `Play` when they are joining and playing the game respectively to prevent volumetric attacks
+3. Treasure: The treasure starts at a random position on the grid. The initial position is  determined by the hash of the block number when the contract is deployed.
+ 4. Movement: 
+• Players can move to any adjacent grid position (up, down, left, right) from their  current position. 
+• The treasure moves each time a player makes a move. The movement of the  treasure is determined by a rule: 
+• If a player moves to a grid position that is a multiple of 5, the treasure moves to a  random adjacent position. 
+• If a player moves to a grid position that is a prime number, the treasure jumps to a  new random position on the grid. 
+5. Winning Condition: A player wins if they move to the grid position where the treasure is  located. 
+6. Reward: The winner receives 90% of the contract’s ETH balance, and the remaining 10% is  locked for future game rounds. 
+
+#### Additional Requirements: 
+
+• Testing: Include a suite of unit tests to demonstrate the correctness of the contract,  especially around edge cases (e.g., treasure movement when multiple conditions are met).
+
+#### Hints: 
+• Consider using modular arithmetic to manage the grid and movement. 
+• Think carefully about how you can create a secure and fair source of randomness. • Be mindful of gas costs and how to minimize them. 
+
 
 ## Challenges and Design Choices
 
-1. How do we store the treasure position ?
-
 **Question** : What will be `Source of randomness` ?
 
-**Solution** : block hash can be manipulated by miners , So , we have used `Chainlink VRFs`
+**Solution** : Block hash can be manipulated by miners , So , we have used `Chainlink VRFs`
+
+**Question** : How winner is decided ?
+
+**Solution** : Whenever a player makes a move , his old  is checked against the old treasury position to check if he is a winner.
+Then new move is made then according to following Rules , the treasure position is recalculated.
+
+- If a player moves to a grid position that is a multiple of 5, the treasure moves to a  random adjacent position. 
+
+- If a player moves to a grid position that is a prime number, the treasure jumps to a  new random position on the grid.
+
+
 
 **Question**  : Do we `Store Treasury position as a Plain number ?` But it can be read by anyone since the data is `public` on blockchain.
 
